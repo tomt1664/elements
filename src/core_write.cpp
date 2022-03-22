@@ -193,8 +193,12 @@ static void SidechainScriptPubKeyToJSON(const CScript& scriptPubKey, UniValue& o
     CTxDestination address;
 
     out.pushKV(prefix + "asm", ScriptToAsmStr(scriptPubKey));
-    out.pushKV(prefix + "desc", InferDescriptor(scriptPubKey, DUMMY_SIGNING_PROVIDER)->ToString());
+    if (include_addresses) {
+        out.pushKV("desc", InferDescriptor(scriptPubKey, DUMMY_SIGNING_PROVIDER)->ToString());
+    }
     if (include_hex) out.pushKV(prefix + "hex", HexStr(scriptPubKey));
+
+    if (include_hex) out.pushKV("hex", HexStr(scriptPubKey));
 
     std::vector<std::vector<unsigned char>> solns;
     const TxoutType type{Solver(scriptPubKey, solns)};
