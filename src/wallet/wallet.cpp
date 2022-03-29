@@ -242,6 +242,8 @@ std::shared_ptr<CWallet> LoadWalletInternal(WalletContext& context, const std::s
             status = DatabaseStatus::FAILED_LOAD;
             return nullptr;
         }
+
+        NotifyWalletLoaded(context, wallet);
         AddWallet(context, wallet);
         wallet->postInitProcess();
 
@@ -358,6 +360,8 @@ std::shared_ptr<CWallet> CreateWallet(WalletContext& context, const std::string&
             wallet->Lock();
         }
     }
+
+    NotifyWalletLoaded(context, wallet);
     AddWallet(context, wallet);
     wallet->postInitProcess();
 
@@ -3133,6 +3137,7 @@ std::shared_ptr<CWallet> CWallet::Create(WalletContext& context, const std::stri
         return nullptr;
     }
 
+<<<<<<< HEAD
     {
         LOCK(context.wallets_mutex);
         for (auto& load_wallet : context.wallet_load_fns) {
@@ -3140,6 +3145,8 @@ std::shared_ptr<CWallet> CWallet::Create(WalletContext& context, const std::stri
         }
     }
 
+=======
+>>>>>>> 1448c99380 (wallet: Postpone NotifyWalletLoaded() for encrypted wallets)
     {
         LOCK(walletInstance->cs_wallet);
         walletInstance->SetBroadcastTransactions(args.GetBoolArg("-walletbroadcast", DEFAULT_WALLETBROADCAST));
