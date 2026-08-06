@@ -16,6 +16,7 @@ from test_framework.util import (
     assert_equal,
 )
 from test_framework import util
+from test_framework.messages import COIN
 
 PEGIN_MINIMUM_HEIGHT = 102
 PEGIN_SUBSIDY_HEIGHT = 150
@@ -487,10 +488,9 @@ class PeginSubsidyTest(BitcoinTestFramework):
         pegin_txid = sidechain.sendrawtransaction(signed["hex"], maxburnamount="1.0")
         pegin_tx = sidechain.gettransaction(pegin_txid, True, True)
         assert_equal(len(pegin_tx["decoded"]["vout"]), 3)
-        # WSH input 41 bytes * 4 = 164 weight
-        # Witness (11 * 72 bytes signatures + 626 bytes script size) = 1418 weight
-        # (164 + 1418 + 3) / 4 = 396 vbytes
-        assert_equal(pegin_tx["decoded"]["vout"][1]["value"], Decimal("0.00000396"))
+        actual_vsize = pegin_tx["decoded"]["vsize"]
+        expected_fee = Decimal(actual_vsize) / Decimal(COIN)
+        assert_equal(pegin_tx["decoded"]["vout"][1]["value"], expected_fee)
         self.generate(sidechain, 1, sync_fun=sync_sidechain)
 
         self.log.info("createrawpegin after enforcement, with validatepegin, above threshold")
