@@ -3,23 +3,23 @@
 # Copyright (c) 2018-2021 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
+ 
 export LC_ALL=C.UTF-8
-
+ 
 if [[ $QEMU_USER_CMD == qemu-s390* ]]; then
   export LC_ALL=C
 fi
-
+ 
 if [ "$CI_OS_NAME" == "macos" ]; then
   sudo -H pip3 install --upgrade --break-system-packages --ignore-installed pip
   # shellcheck disable=SC2086
   IN_GETOPT_BIN="$(brew --prefix gnu-getopt)/bin/getopt" ${CI_RETRY_EXE} pip3 install --user $PIP_PACKAGES
 fi
-
+ 
 # Create folders that are mounted into the docker
 mkdir -p "${CCACHE_DIR}"
 mkdir -p "${PREVIOUS_RELEASES_DIR}"
-
+ 
 export ASAN_OPTIONS="detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1"
 export LSAN_OPTIONS="suppressions=${BASE_ROOT_DIR}/test/sanitizer_suppressions/lsan"
 export TSAN_OPTIONS="suppressions=${BASE_ROOT_DIR}/test/sanitizer_suppressions/tsan:halt_on_error=1:log_path=${BASE_SCRATCH_DIR}/sanitizer-output/tsan"
@@ -28,18 +28,18 @@ env | grep -E '^(BITCOIN_CONFIG|BASE_|QEMU_|CCACHE_|LC_ALL|BOOST_TEST_RANDOM|DEB
 if [[ $BITCOIN_CONFIG = *--with-sanitizers=*address* ]]; then # If ran with (ASan + LSan), Docker needs access to ptrace (https://github.com/google/sanitizers/issues/764)
   DOCKER_ADMIN="--cap-add SYS_PTRACE"
 fi
-
+ 
 export P_CI_DIR="$PWD"
-
+ 
 if [ -z "$DANGER_RUN_CI_ON_HOST" ]; then
   echo "Creating $DOCKER_NAME_TAG container to run in"
   ${CI_RETRY_EXE} docker pull "$DOCKER_NAME_TAG"
-
+ 
   if [ -n "${RESTART_CI_DOCKER_BEFORE_RUN}" ] ; then
     echo "Restart docker before run to stop and clear all containers started with --rm"
     systemctl restart docker
   fi
-
+ 
   # shellcheck disable=SC2086
   DOCKER_ID=$(docker run $DOCKER_ADMIN --rm --interactive --detach --tty \
                   --mount type=bind,src=$BASE_ROOT_DIR,dst=/ro_base,readonly \
@@ -54,30 +54,20 @@ if [ -z "$DANGER_RUN_CI_ON_HOST" ]; then
 else
   echo "Running on host system without docker wrapper"
 fi
-
+ 
 CI_EXEC () {
   $DOCKER_CI_CMD_PREFIX bash -c "export PATH=$BASE_SCRATCH_DIR/bins/:\$PATH && cd \"$P_CI_DIR\" && $*"
 }
 export -f CI_EXEC
-
+ 
 if [ -n "$DPKG_ADD_ARCH" ]; then
   CI_EXEC dpkg --add-architecture "$DPKG_ADD_ARCH"
 fi
-
+ 
 if [[ $DOCKER_NAME_TAG == *centos* ]] || [[ $DOCKER_NAME_TAG == *rocky* ]]; then
   ${CI_RETRY_EXE} CI_EXEC dnf -y install epel-release
   ${CI_RETRY_EXE} CI_EXEC dnf -y --allowerasing install "$DOCKER_PACKAGES" "$PACKAGES"
 elif [ "$CI_USE_APT_INSTALL" != "no" ]; then
-  if [[ $DOCKER_NAME_TAG == *bullseye* ]]; then
-    # Debian 11 (bullseye) reached end of LTS on 2026-08-31
-    # Remove this block once the image is bumped to bookworm in
-    # ci/test/00_setup_env_*.sh.
-    echo "bullseye is EOL: pinning apt to the image's snapshot.debian.org timestamp"
-    CI_EXEC "sed -i -e 's|^# deb |deb |' -e '/deb\.debian\.org/d' /etc/apt/sources.list"
-    CI_EXEC "grep -q snapshot.debian.org /etc/apt/sources.list || printf '%s\n' 'deb http://archive.debian.org/debian bullseye main' 'deb http://archive.debian.org/debian bullseye-updates main' > /etc/apt/sources.list"
-    CI_EXEC 'printf "%s\n" "Acquire::Check-Valid-Until \"false\";" "Acquire::Retries \"5\";" > /etc/apt/apt.conf.d/10bullseye-eol'
-    CI_EXEC cat /etc/apt/sources.list
-  fi
   ${CI_RETRY_EXE} CI_EXEC apt-get update
   ${CI_RETRY_EXE} CI_EXEC apt-get install --no-install-recommends --no-upgrade -y "$PACKAGES" "$DOCKER_PACKAGES"
   if [ -n "$PIP_PACKAGES" ]; then
@@ -85,7 +75,7 @@ elif [ "$CI_USE_APT_INSTALL" != "no" ]; then
     ${CI_RETRY_EXE} pip3 install --user $PIP_PACKAGES
   fi
 fi
-
+ 
 if [ "$CI_OS_NAME" == "macos" ]; then
   top -l 1 -s 0 | awk ' /PhysMem/ {print}'
   echo "Number of CPUs: $(sysctl -n hw.logicalcpu)"
@@ -96,7 +86,7 @@ else
 fi
 CI_EXEC echo "Free disk space:"
 CI_EXEC df -h
-
+ 
 if [ "$RUN_FUZZ_TESTS" = "true" ]; then
   export DIR_FUZZ_IN=${DIR_QA_ASSETS}/fuzz_seed_corpus/
   if [ ! -d "$DIR_FUZZ_IN" ]; then
@@ -109,9 +99,9 @@ elif [ "$RUN_UNIT_TESTS" = "true" ] || [ "$RUN_UNIT_TESTS_SEQUENTIAL" = "true" ]
     CI_EXEC curl --location --fail https://github.com/ElementsProject/qa-assets/raw/master/unit_test_data/script_assets_test.json -o "${DIR_UNIT_TEST_DATA}/script_assets_test.json"
   fi
 fi
-
+ 
 CI_EXEC mkdir -p "${BASE_SCRATCH_DIR}/sanitizer-output/"
-
+ 
 if [[ ${USE_MEMORY_SANITIZER} == "true" ]]; then
   CI_EXEC "update-alternatives --install /usr/bin/clang++ clang++ \$(which clang++-9) 100"
   CI_EXEC "update-alternatives --install /usr/bin/clang clang \$(which clang-9) 100"
@@ -120,12 +110,12 @@ if [[ ${USE_MEMORY_SANITIZER} == "true" ]]; then
   CI_EXEC "cd ${BASE_SCRATCH_DIR}/msan/build/ && cmake -DLLVM_ENABLE_PROJECTS='libcxx;libcxxabi' -DCMAKE_BUILD_TYPE=Release -DLLVM_USE_SANITIZER=Memory -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_TARGETS_TO_BUILD=X86 ../llvm-project/llvm/"
   CI_EXEC "cd ${BASE_SCRATCH_DIR}/msan/build/ && make $MAKEJOBS cxx"
 fi
-
+ 
 if [ -z "$DANGER_RUN_CI_ON_HOST" ]; then
   echo "Create $BASE_ROOT_DIR"
   CI_EXEC rsync -a /ro_base/ "$BASE_ROOT_DIR"
 fi
-
+ 
 if [ "$USE_BUSY_BOX" = "true" ]; then
   echo "Setup to use BusyBox utils"
   CI_EXEC mkdir -p "${BASE_SCRATCH_DIR}/bins/"
